@@ -3,21 +3,173 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Vue 3 SPA User CRUD</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
 <body>
+    <div id="app" class="container my-5">
+        <h2 class="mb-4">User Management SPA</h2>
 
+        <!-- Form -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form @submit.prevent="submitForm">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" placeholder="Username" v-model="form.username">
+                        <div class="text-danger mt-1" v-if="errors.username">{{ errors.username }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <input type="number" class="form-control" placeholder="Age" v-model.number="form.age">
+                        <div class="text-danger mt-1" v-if="errors.age">{{ errors.age }}</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary me-2">{{ form._id ? 'Update' : 'Add' }}</button>
+                    <button type="button" class="btn btn-secondary" @click="resetForm">Reset</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- User List -->
+        <table class="table table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Age</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="user in users" :key="user._id">
+                    <td>{{ user._id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.age }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning me-2" @click="editUser(user)">Edit</button>
+                        <button class="btn btn-sm btn-danger" @click="deleteUser(user._id)">Delete</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Axios CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <script>
+        const { createApp, reactive, ref, onMounted } = Vue;
+
+        // Composable for CRUD
+        function useUserAPI() {
+            const API_URL = 'https://user-api-zz1w.onrender.com/user';
+            const users = ref([]);
+
+            const fetchUsers = async () => {
+                try {
+                    const res = await axios.get(API_URL);
+                    users.value = res.data;
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+
+            const addUser = async (data) => {
+                try {
+                    await axios.post(API_URL, data);
+                    await fetchUsers();
+                } catch (err) {
+                    throw err.response.data; // throw backend errors to handle in form
+                }
+            };
+
+            const updateUser = async (id, data) => {
+                try {
+                    await axios.put(`${API_URL}/${id}`, data);
+                    await fetchUsers();
+                } catch (err) {
+                    throw err.response.data;
+                }
+            };
+
+            const deleteUser = async (id) => {
+                try {
+                    await axios.delete(`${API_URL}/${id}`);
+                    await fetchUsers();
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+
+            return { users, fetchUsers, addUser, updateUser, deleteUser };
+        }
+
+        // Vue App
+        createApp({
+            setup() {
+                const { users, fetchUsers, addUser, updateUser, deleteUser } = useUserAPI();
+
+                const form = reactive({
+                    _id: '',
+                    username: '',
+                    age: ''
+                });
+
+                const errors = reactive({
+                    username: '',
+                    age: ''
+                });
+
+                const resetErrors = () => {
+                    errors.username = '';
+                    errors.age = '';
+                };
+
+                const resetForm = () => {
+                    form._id = '';
+                    form.username = '';
+                    form.age = '';
+                    resetErrors();
+                };
+
+                const submitForm = async () => {
+                    resetErrors();
+                    try {
+                        if (form._id) {
+                            await updateUser(form._id, { username: form.username, age: form.age });
+                        } else {
+                            await addUser({ username: form.username, age: form.age });
+                        }
+                        resetForm();
+                    } catch (err) {
+                        // Handle validation errors
+                        if (err.errors) {
+                            for (let key in err.errors) {
+                                errors[key] = err.errors[key].message;
+                            }
+                        } else {
+                            console.error(err);
+                        }
+                    }
+                };
+
+                const editUser = (user) => {
+                    form._id = user._id;
+                    form.username = user.username;
+                    form.age = user.age;
+                    resetErrors();
+                };
+
+                onMounted(() => {
+                    fetchUsers();
+                });
+
+                return { users, form, errors, submitForm, editUser, resetForm, deleteUser };
+            }
+        }).mount('#app');
+    </script>
 </body>
-
-<script>
-    const URL = 'http://localhost:3000/user/'
-    fetch(URL)
-        .then((res) => res.json())
-        .then((data) => {
-            console.log(data);
-        })
-</script>
 
 </html>

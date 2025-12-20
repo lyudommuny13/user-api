@@ -1,12 +1,12 @@
-const mongoose = require('mongoose')
+require('dotenv').config();
+const mongoose = require('mongoose');
 
-mongoose.connect("mongodb+srv://muny:Muny1212@cluster0.co29bzr.mongodb.net/expressDB?appName=Cluster0")
-.then((res) => {
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => {
     console.log("Connect DB Success");
-})
-.catch((err) => {
+  })
+  .catch((err) => {
     console.log(err);
-})
+  });
 
-module.exports = mongoose
-
+module.exports = mongoose;
